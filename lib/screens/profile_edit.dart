@@ -210,9 +210,19 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
           });
         }
       }
+
+      // Pre-populate doctor fields from persisted user data
+      if (user.specialization != null && user.specialization!.isNotEmpty) {
+        _selectedSpecialization = user.specialization;
+      }
+      if (user.conditionsTreated != null) {
+        _selectedDoctorConditions.addAll(user.conditionsTreated!);
+      }
     }
     final role = ref.read(authProvider).userRole ?? '';
-    if (role != 'Patient') _loadDoctorProfile();
+    // Only fetch fresh doctor profile for Doctor role; Lab/Pharmacy/Student/Instructor
+    // don't have a doctor profile endpoint.
+    if (role == 'Doctor') _loadDoctorProfile();
   }
 
   void _parseAndSetHeight(String? heightStr) {
@@ -281,7 +291,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
 
     try {
       final role = ref.read(authProvider).userRole ?? '';
-      final isDoctor = role != 'Patient';
+      final isDoctor = role == 'Doctor';
 
       // For doctors: save specialization + conditions to doctor profile
       if (isDoctor && _selectedSpecialization != null && _selectedSpecialization!.isNotEmpty) {
@@ -350,6 +360,9 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
           if (weightStr != null) 'weight': weightStr,
           'existingConditions': _selectedConditions.join(', '),
           'healthGoals': _selectedGoals.join(', '),
+          if (isDoctor && _selectedSpecialization != null)
+            'specialization': _selectedSpecialization,
+          if (isDoctor) 'conditionsTreated': _selectedDoctorConditions.toList(),
         };
         final user = app_user.User.fromJson(mergedMap);
         ref.read(authProvider.notifier).setUser(user);
@@ -388,8 +401,9 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
-    final role = ref.read(authProvider).userRole ?? '';
+    final role = ref.watch(authProvider).userRole ?? '';
     final isPatient = role == 'Patient';
+    final isDoctor = role == 'Doctor';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFD),
@@ -587,7 +601,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                           'Email cannot be changed',
                           style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                         ),
-                        if (!isPatient) ...[
+                        if (isDoctor) ...[
                           const SizedBox(height: 24),
                           const Text(
                             'Doctor Profile',

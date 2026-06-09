@@ -17,6 +17,8 @@ class User {
   final String? existingConditions;
   final String? healthGoals;
   final List<dynamic>? emergencyContacts;
+  final String? specialization;
+  final List<String>? conditionsTreated;
 
   User({
     required this.id,
@@ -37,6 +39,8 @@ class User {
     this.existingConditions,
     this.healthGoals,
     this.emergencyContacts,
+    this.specialization,
+    this.conditionsTreated,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -61,6 +65,10 @@ class User {
       existingConditions: json['existingConditions']?.toString(),
       healthGoals: json['healthGoals']?.toString(),
       emergencyContacts: json['emergencyContacts'] is List ? json['emergencyContacts'] as List<dynamic> : null,
+      specialization: json['specialization']?.toString(),
+      conditionsTreated: json['conditionsTreated'] is List
+          ? (json['conditionsTreated'] as List).map((c) => c.toString()).toList()
+          : null,
     );
   }
 
@@ -84,6 +92,8 @@ class User {
       if (existingConditions != null) 'existingConditions': existingConditions,
       if (healthGoals != null) 'healthGoals': healthGoals,
       if (emergencyContacts != null) 'emergencyContacts': emergencyContacts,
+      if (specialization != null) 'specialization': specialization,
+      if (conditionsTreated != null) 'conditionsTreated': conditionsTreated,
     };
   }
 
@@ -106,6 +116,8 @@ class User {
     String? existingConditions,
     String? healthGoals,
     List<dynamic>? emergencyContacts,
+    String? specialization,
+    List<String>? conditionsTreated,
   }) {
     return User(
       id: id ?? this.id,
@@ -126,6 +138,8 @@ class User {
       existingConditions: existingConditions ?? this.existingConditions,
       healthGoals: healthGoals ?? this.healthGoals,
       emergencyContacts: emergencyContacts ?? this.emergencyContacts,
+      specialization: specialization ?? this.specialization,
+      conditionsTreated: conditionsTreated ?? this.conditionsTreated,
     );
   }
 }
