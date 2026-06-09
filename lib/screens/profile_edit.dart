@@ -292,6 +292,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     try {
       final role = ref.read(authProvider).userRole ?? '';
       final isDoctor = role == 'Doctor';
+      final isPatient = role == 'Patient';
 
       // For doctors: save specialization + conditions to doctor profile
       if (isDoctor && _selectedSpecialization != null && _selectedSpecialization!.isNotEmpty) {
@@ -354,12 +355,17 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         final mergedMap = <String, dynamic>{
           if (currentUser != null) ...currentUser.toJson(),
           ...userData,
-          'address': addressController.text.trim(),
-          'bloodGroup': bloodGroupVal,
-          if (heightStr != null) 'height': heightStr,
-          if (weightStr != null) 'weight': weightStr,
-          'existingConditions': _selectedConditions.join(', '),
-          'healthGoals': _selectedGoals.join(', '),
+          // Always use form values for core fields — backend may return empty object
+          'name': nameController.text.trim(),
+          'phoneNumber': phoneController.text.trim(),
+          if (isPatient) ...{
+            'address': addressController.text.trim(),
+            'bloodGroup': bloodGroupVal,
+            if (heightStr != null) 'height': heightStr,
+            if (weightStr != null) 'weight': weightStr,
+            'existingConditions': _selectedConditions.join(', '),
+            'healthGoals': _selectedGoals.join(', '),
+          },
           if (isDoctor && _selectedSpecialization != null)
             'specialization': _selectedSpecialization,
           if (isDoctor) 'conditionsTreated': _selectedDoctorConditions.toList(),
