@@ -164,6 +164,9 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       phoneController.text = user.phoneNumber;
       ageController.text = user.age ?? '';
       cnicController.text = user.cnic ?? '';
+      addressController.text = user.address ?? '';
+      bloodGroupController.text = user.bloodGroup ?? '';
+
       final g = user.gender?.trim() ?? '';
       if (g.toLowerCase() == 'male') {
         _selectedGender = 'Male';
@@ -172,9 +175,71 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       } else if (g.isNotEmpty) {
         _selectedGender = 'Other';
       }
+
+      _parseAndSetHeight(user.height);
+      _parseAndSetWeight(user.weight);
+
+      if (user.existingConditions != null && user.existingConditions!.isNotEmpty) {
+        _selectedConditions.addAll(
+          user.existingConditions!.split(', ').where((c) => c.isNotEmpty),
+        );
+      }
+      if (user.healthGoals != null && user.healthGoals!.isNotEmpty) {
+        _selectedGoals.addAll(
+          user.healthGoals!.split(', ').where((g) => g.isNotEmpty),
+        );
+      }
+
+      final ec = user.emergencyContacts;
+      if (ec != null && ec.isNotEmpty) {
+        _emergencyContacts.clear();
+        for (final c in ec) {
+          if (c is Map) {
+            _emergencyContacts.add({
+              'name': TextEditingController(text: c['name']?.toString() ?? ''),
+              'relation': TextEditingController(text: c['relationship']?.toString() ?? ''),
+              'phone': TextEditingController(text: c['phone']?.toString() ?? ''),
+            });
+          }
+        }
+        while (_emergencyContacts.length < 2) {
+          _emergencyContacts.add({
+            'name': TextEditingController(),
+            'relation': TextEditingController(),
+            'phone': TextEditingController(),
+          });
+        }
+      }
     }
     final role = ref.read(authProvider).userRole ?? '';
     if (role != 'Patient') _loadDoctorProfile();
+  }
+
+  void _parseAndSetHeight(String? heightStr) {
+    if (heightStr == null || heightStr.isEmpty) return;
+    if (heightStr.contains("'")) {
+      _heightUnit = 'ft';
+      final parts = heightStr.replaceAll('"', '').split("'");
+      _heightFt = int.tryParse(parts[0].trim()) ?? 5;
+      _heightIn = parts.length > 1 ? (int.tryParse(parts[1].trim()) ?? 0) : 0;
+    } else if (heightStr.contains(' m')) {
+      _heightUnit = 'm';
+      _heightM = heightStr.replaceAll(' m', '').trim();
+    } else if (heightStr.contains(' cm')) {
+      _heightUnit = 'cm';
+      _heightCm = heightStr.replaceAll(' cm', '').trim();
+    }
+  }
+
+  void _parseAndSetWeight(String? weightStr) {
+    if (weightStr == null || weightStr.isEmpty) return;
+    if (weightStr.contains(' lbs')) {
+      _weightUnit = 'lbs';
+      _weightLbs = weightStr.replaceAll(' lbs', '').trim();
+    } else if (weightStr.contains(' kg')) {
+      _weightUnit = 'kg';
+      _weightKg = weightStr.replaceAll(' kg', '').trim();
+    }
   }
 
   Future<void> _loadDoctorProfile() async {
@@ -253,6 +318,8 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
               })
           .toList();
 
+      final bloodGroupVal = bloodGroupController.text.trim();
+
       final result = await _userService.updateProfile(
         name: nameController.text.trim(),
         phoneNumber: phoneController.text.trim(),
@@ -262,6 +329,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         height: heightStr,
         weight: weightStr,
         address: addressController.text.trim().isEmpty ? null : addressController.text.trim(),
+        bloodGroup: bloodGroupVal.isEmpty ? null : bloodGroupVal,
         profileImage: _imageBytes,
         existingConditions: _selectedConditions.isEmpty ? null : _selectedConditions.join(', '),
         healthGoals: _selectedGoals.isEmpty ? null : _selectedGoals.join(', '),
@@ -269,8 +337,21 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       );
 
       if (result['success']) {
-        final userData = result['user'];
-        final user = app_user.User.fromJson(userData);
+        final userData = result['user'] as Map<String, dynamic>;
+        // Merge backend response with current user so fields not returned by
+        // the API (address, bloodGroup, height, weight, conditions) are preserved.
+        final currentUser = ref.read(authProvider).user;
+        final mergedMap = <String, dynamic>{
+          if (currentUser != null) ...currentUser.toJson(),
+          ...userData,
+          'address': addressController.text.trim(),
+          'bloodGroup': bloodGroupVal,
+          if (heightStr != null) 'height': heightStr,
+          if (weightStr != null) 'weight': weightStr,
+          'existingConditions': _selectedConditions.join(', '),
+          'healthGoals': _selectedGoals.join(', '),
+        };
+        final user = app_user.User.fromJson(mergedMap);
         ref.read(authProvider.notifier).setUser(user);
 
         if (mounted) {
