@@ -2870,22 +2870,28 @@ class _ProfileEditCardState extends ConsumerState<_ProfileEditCard> {
       });
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data;
-        Map<String, dynamic> userMap;
+        Map<String, dynamic> backendMap;
         if (data is Map && data['user'] is Map) {
-          userMap = Map<String, dynamic>.from(data['user'] as Map);
+          backendMap = Map<String, dynamic>.from(data['user'] as Map);
         } else if (data is Map && (data.containsKey('_id') || data.containsKey('id'))) {
-          userMap = Map<String, dynamic>.from(data);
+          backendMap = Map<String, dynamic>.from(data);
         } else {
-          userMap = data is Map ? Map<String, dynamic>.from(data) : {};
+          backendMap = data is Map ? Map<String, dynamic>.from(data) : {};
         }
-        if (userMap.isNotEmpty) {
-          final existing = ref.read(authProvider).user;
-          if (existing != null && userMap['profilePicture'] == null) {
-            userMap['profilePicture'] = existing.profilePicture;
-          }
-          final updatedUser = app_user.User.fromJson(userMap);
-          ref.read(authProvider.notifier).setUser(updatedUser);
-        }
+        // Merge: start from existing cached user so no fields are lost,
+        // then overlay backend response, then always force form values so
+        // the user's edits are never reverted by a sparse backend response.
+        final existing = ref.read(authProvider).user;
+        final mergedMap = <String, dynamic>{
+          if (existing != null) ...existing.toJson(),
+          ...backendMap,
+          'name': _nameCtrl.text.trim(),
+          'phoneNumber': _phoneCtrl.text.trim(),
+          'age': _ageCtrl.text.trim(),
+          if (_gender != null) 'gender': _gender,
+        };
+        final updatedUser = app_user.User.fromJson(mergedMap);
+        ref.read(authProvider.notifier).setUser(updatedUser);
       }
       setState(() { _editMode = false; _saving = false; });
       if (mounted) {
