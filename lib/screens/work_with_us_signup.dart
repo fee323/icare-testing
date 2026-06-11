@@ -20,28 +20,28 @@ class WorkWithUsSignup extends StatefulWidget {
 class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
   int _step = 0; // 0=Partner Type, 1=Basic Info, 2=Detailed Form
 
-  // ── Step 1: Basic Info ───────────────────────────────────────────────────
   final _step1Key = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _contactPersonCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  String _dialCode = '+92';
+  String _dialFlag = '🇵🇰';
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _cityCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
   bool _obscurePassword = true;
 
-  // ── Step 2: Partner Type ─────────────────────────────────────────────────
   String? _selectedRole;
 
-  // ── Step 3: Doctor Fields ────────────────────────────────────────────────
   final _qualificationCtrl = TextEditingController();
   final _specializationCtrl = TextEditingController();
   final _pmdcCtrl = TextEditingController();
   final _docExpCtrl = TextEditingController();
   final _workplaceCtrl = TextEditingController();
   final Set<String> _docAvailDays = {};
-  final _docTimingsCtrl = TextEditingController();
+  final _docStartTimeCtrl = TextEditingController();
+  final _docEndTimeCtrl = TextEditingController();
   String? _docCnic;
   String? _docPmdcCert;
   String? _docExpCert;
@@ -49,14 +49,14 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
   final bool _docAgreeOnboarding = false;
   final _docCommentsCtrl = TextEditingController();
 
-  // ── Step 3: Pharmacy Fields ──────────────────────────────────────────────
   final _pharmNameCtrl = TextEditingController();
   final _drugLicenseCtrl = TextEditingController();
   final _pharmacistNameCtrl = TextEditingController();
   final _pharmYearsCtrl = TextEditingController();
   bool? _pharmDelivery;
   final Set<String> _pharmOpDays = {};
-  final _pharmHoursCtrl = TextEditingController();
+  final _pharmStartTimeCtrl = TextEditingController();
+  final _pharmEndTimeCtrl = TextEditingController();
   bool? _pharmOnlineOrders;
   bool? _pharmHasPOS;
   final _pharmPOSDetailCtrl = TextEditingController();
@@ -68,14 +68,14 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
   final bool _pharmAgreeOnboarding = false;
   final _pharmCommentsCtrl = TextEditingController();
 
-  // ── Step 3: Laboratory Fields ────────────────────────────────────────────
   final _labNameCtrl = TextEditingController();
   final _labLicenseCtrl = TextEditingController();
   final _labYearsCtrl = TextEditingController();
   String? _labTestsFile;
   bool? _labHomeSampling;
   final Set<String> _labOpDays = {};
-  final _labHoursCtrl = TextEditingController();
+  final _labStartTimeCtrl = TextEditingController();
+  final _labEndTimeCtrl = TextEditingController();
   bool? _labOnlineReports;
   bool? _labHasLIS;
   final _labLISDetailCtrl = TextEditingController();
@@ -87,7 +87,6 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
   final bool _labAgreeOnboarding = false;
   final _labCommentsCtrl = TextEditingController();
 
-  // ── Step 3: Student Fields ───────────────────────────────────────────────
   final _studentUniversityCtrl = TextEditingController();
   final _studentProgramCtrl = TextEditingController();
   final _studentYearCtrl = TextEditingController();
@@ -96,7 +95,6 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
   final bool _studentConfirmInfo = false;
   final _studentCommentsCtrl = TextEditingController();
 
-  // ── Step 3: Instructor Fields ────────────────────────────────────────────
   final _instrQualificationCtrl = TextEditingController();
   final _instrSpecializationCtrl = TextEditingController();
   final _instrExpCtrl = TextEditingController();
@@ -156,13 +154,16 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
     _emailCtrl.dispose(); _cityCtrl.dispose(); _addressCtrl.dispose();
     _qualificationCtrl.dispose(); _specializationCtrl.dispose();
     _pmdcCtrl.dispose(); _docExpCtrl.dispose(); _workplaceCtrl.dispose();
-    _docTimingsCtrl.dispose(); _docCommentsCtrl.dispose();
+    _docStartTimeCtrl.dispose(); _docEndTimeCtrl.dispose();
+    _docCommentsCtrl.dispose();
     _pharmNameCtrl.dispose(); _drugLicenseCtrl.dispose();
     _pharmacistNameCtrl.dispose(); _pharmYearsCtrl.dispose();
-    _pharmHoursCtrl.dispose(); _pharmPOSDetailCtrl.dispose();
+    _pharmStartTimeCtrl.dispose(); _pharmEndTimeCtrl.dispose();
+    _pharmPOSDetailCtrl.dispose();
     _pharmCommentsCtrl.dispose();
     _labNameCtrl.dispose(); _labLicenseCtrl.dispose();
-    _labYearsCtrl.dispose(); _labHoursCtrl.dispose();
+    _labYearsCtrl.dispose();
+    _labStartTimeCtrl.dispose(); _labEndTimeCtrl.dispose();
     _labLISDetailCtrl.dispose(); _labCommentsCtrl.dispose();
     _studentUniversityCtrl.dispose(); _studentProgramCtrl.dispose();
     _studentYearCtrl.dispose(); _studentIdCtrl.dispose(); _studentCommentsCtrl.dispose();
@@ -174,7 +175,6 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
 
   void _nextStep() {
     if (_step == 0) {
-      // Step 0: Partner Type — must select a role first
       if (_selectedRole == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please select a partner type to continue')),
@@ -183,7 +183,6 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
       }
       setState(() => _step = 1);
     } else if (_step == 1) {
-      // Step 1: Basic Info — validate form
       if (!_step1Key.currentState!.validate()) return;
       setState(() => _step = 2);
     }
@@ -194,15 +193,12 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
   }
 
   Future<void> _submit() async {
-    // Agreement is implicit by submitting — no checkbox validation needed
     setState(() => _submitting = true);
-
     try {
-      // Map display roles to backend enum values in User model
       final roleMap = {
         'Doctor': 'doctor',
         'Pharmacy': 'pharmacy',
-        'Laboratory': 'lab',       // enum is 'lab' not 'laboratory'
+        'Laboratory': 'lab',
         'Student': 'student',
         'Instructor': 'instructor',
       };
@@ -215,7 +211,7 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
         'name': capturedName,
         'email': _emailCtrl.text.trim().toLowerCase(),
         'password': _passwordCtrl.text,
-        'phone': _phoneCtrl.text.trim(),
+        'phone': '$_dialCode${_phoneCtrl.text.trim()}',
         'role': backendRole,
         'city': _cityCtrl.text.trim(),
         'address': _addressCtrl.text.trim(),
@@ -269,6 +265,194 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  Future<void> _selectTime(TextEditingController controller) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        controller.text = picked.format(context);
+      });
+    }
+  }
+
+  static const _countries = [
+    ['🇵🇰', 'Pakistan', '+92'], ['🇺🇸', 'United States', '+1'],
+    ['🇬🇧', 'United Kingdom', '+44'], ['🇦🇪', 'UAE', '+971'],
+    ['🇸🇦', 'Saudi Arabia', '+966'], ['🇮🇳', 'India', '+91'],
+    ['🇧🇩', 'Bangladesh', '+880'], ['🇦🇫', 'Afghanistan', '+93'],
+    ['🇮🇷', 'Iran', '+98'], ['🇨🇳', 'China', '+86'],
+    ['🇹🇷', 'Turkey', '+90'], ['🇶🇦', 'Qatar', '+974'],
+    ['🇰🇼', 'Kuwait', '+965'], ['🇧🇭', 'Bahrain', '+973'],
+    ['🇴🇲', 'Oman', '+968'], ['🇨🇦', 'Canada', '+1'],
+    ['🇦🇺', 'Australia', '+61'], ['🇩🇪', 'Germany', '+49'],
+    ['🇫🇷', 'France', '+33'], ['🇮🇹', 'Italy', '+39'],
+    ['🇪🇸', 'Spain', '+34'], ['🇳🇱', 'Netherlands', '+31'],
+    ['🇧🇪', 'Belgium', '+32'], ['🇨🇭', 'Switzerland', '+41'],
+    ['🇸🇪', 'Sweden', '+46'], ['🇳🇴', 'Norway', '+47'],
+    ['🇩🇰', 'Denmark', '+45'], ['🇷🇺', 'Russia', '+7'],
+    ['🇯🇵', 'Japan', '+81'], ['🇰🇷', 'South Korea', '+82'],
+    ['🇲🇾', 'Malaysia', '+60'], ['🇸🇬', 'Singapore', '+65'],
+    ['🇮🇩', 'Indonesia', '+62'], ['🇹🇭', 'Thailand', '+66'],
+    ['🇵🇭', 'Philippines', '+63'], ['🇻🇳', 'Vietnam', '+84'],
+    ['🇪🇬', 'Egypt', '+20'], ['🇳🇬', 'Nigeria', '+234'],
+    ['🇿🇦', 'South Africa', '+27'], ['🇰🇪', 'Kenya', '+254'],
+    ['🇧🇷', 'Brazil', '+55'], ['🇲🇽', 'Mexico', '+52'],
+    ['🇦🇷', 'Argentina', '+54'], ['🇳🇿', 'New Zealand', '+64'],
+    ['🇮🇪', 'Ireland', '+353'], ['🇵🇹', 'Portugal', '+351'],
+    ['🇬🇷', 'Greece', '+30'], ['🇵🇱', 'Poland', '+48'],
+    ['🇺🇦', 'Ukraine', '+380'], ['🇱🇰', 'Sri Lanka', '+94'],
+    ['🇳🇵', 'Nepal', '+977'], ['🇲🇻', 'Maldives', '+960'],
+    ['🇯🇴', 'Jordan', '+962'], ['🇱🇧', 'Lebanon', '+961'],
+    ['🇮🇶', 'Iraq', '+964'], ['🇸🇾', 'Syria', '+963'],
+    ['🇾🇪', 'Yemen', '+967'], ['🇲🇦', 'Morocco', '+212'],
+    ['🇩🇿', 'Algeria', '+213'], ['🇹🇳', 'Tunisia', '+216'],
+    ['🇱🇾', 'Libya', '+218'], ['🇸🇩', 'Sudan', '+249'],
+    ['🇪🇹', 'Ethiopia', '+251'], ['🇸🇴', 'Somalia', '+252'],
+    ['🇹🇿', 'Tanzania', '+255'], ['🇺🇬', 'Uganda', '+256'],
+    ['🇬🇭', 'Ghana', '+233'], ['🇺🇿', 'Uzbekistan', '+998'],
+    ['🇰🇿', 'Kazakhstan', '+7'], ['🇹🇯', 'Tajikistan', '+992'],
+    ['🇹🇲', 'Turkmenistan', '+993'], ['🇰🇬', 'Kyrgyzstan', '+996'],
+    ['🇦🇿', 'Azerbaijan', '+994'], ['🇧🇳', 'Brunei', '+673'],
+    ['🇲🇲', 'Myanmar', '+95'], ['🇭🇰', 'Hong Kong', '+852'],
+  ];
+
+  Future<void> _pickCountryCode() async {
+    String search = '';
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) {
+          final q = search.trim().toLowerCase().replaceAll('+', '');
+          final filtered = q.isEmpty
+              ? _countries
+              : _countries.where((c) {
+                  final name = c[1].toLowerCase();
+                  final code = c[2].replaceAll('+', '');
+                  return name.contains(q) || code.startsWith(q);
+                }).toList();
+          return AlertDialog(
+            contentPadding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            title: const Text('Select Country Code',
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0B2D6E))),
+            content: SizedBox(
+              width: 300,
+              height: 320,
+              child: Column(
+                children: [
+                  TextField(
+                    autofocus: true,
+                    onChanged: (v) => setS(() => search = v),
+                    decoration: InputDecoration(
+                      hintText: 'Search name or code e.g. +92',
+                      hintStyle: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                      prefixIcon: const Icon(Icons.search_rounded,
+                          size: 18, color: Color(0xFF94A3B8)),
+                      isDense: true,
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 10),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                              color: AppColors.primaryColor, width: 1.5)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: filtered.isEmpty
+                        ? const Center(
+                            child: Text('No match found',
+                                style: TextStyle(
+                                    fontSize: 12, color: Color(0xFF94A3B8))))
+                        : ListView.builder(
+                            itemCount: filtered.length,
+                            itemBuilder: (_, i) {
+                              final c = filtered[i];
+                              final isSel = c[2] == _dialCode && c[0] == _dialFlag;
+                              return InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _dialFlag = c[0];
+                                    _dialCode = c[2];
+                                  });
+                                  Navigator.pop(ctx);
+                                },
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 9),
+                                  decoration: BoxDecoration(
+                                    color: isSel
+                                        ? AppColors.primaryColor
+                                            .withValues(alpha: 0.06)
+                                        : null,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Text(c[0],
+                                          style: const TextStyle(fontSize: 16)),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(c[1],
+                                            style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: isSel
+                                                    ? FontWeight.w700
+                                                    : FontWeight.w500,
+                                                color: isSel
+                                                    ? AppColors.primaryColor
+                                                    : const Color(0xFF0F172A))),
+                                      ),
+                                      Text(c[2],
+                                          style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w700,
+                                              color: isSel
+                                                  ? AppColors.primaryColor
+                                                  : const Color(0xFF64748B))),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: TextButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text('Cancel',
+                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -391,9 +575,9 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
         ],
         _StepIndicator(currentStep: _step),
         const SizedBox(height: 28),
-        if (_step == 0) _buildStep1(),  // Partner Type
-        if (_step == 1) _buildStep2(),  // Basic Info
-        if (_step == 2) _buildStep3(),  // Detailed Form
+        if (_step == 0) _buildStep1(),
+        if (_step == 1) _buildStep2(),
+        if (_step == 2) _buildStep3(),
         if (_step == 0) ...[
           const SizedBox(height: 24),
           Center(
@@ -424,9 +608,6 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
     );
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
-  // STEP 1 — Select Partner Type (shown FIRST)
-  // ════════════════════════════════════════════════════════════════════════════
   Widget _buildStep1() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -440,9 +621,6 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
     );
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
-  // STEP 2 — Basic Information (shown SECOND)
-  // ════════════════════════════════════════════════════════════════════════════
   Widget _buildStep2() {
     return Form(
       key: _step1Key,
@@ -457,13 +635,61 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
           _inputField(_contactPersonCtrl, 'Contact Person Name (if organization)',
               Icons.badge_outlined),
           const SizedBox(height: 14),
-          _inputField(_phoneCtrl, 'Phone Number', Icons.phone_outlined,
-              keyboardType: TextInputType.phone,
-              validator: (v) => v == null || v.isEmpty ? 'Phone is required' : null),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onTap: _pickCountryCode,
+                child: Container(
+                  height: 50,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_dialFlag, style: const TextStyle(fontSize: 16)),
+                      const SizedBox(width: 6),
+                      Text(_dialCode,
+                          style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF0F172A))),
+                      const Icon(Icons.arrow_drop_down,
+                          size: 20, color: Color(0xFF94A3B8)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _inputField(_phoneCtrl, 'Phone Number', Icons.phone_outlined,
+                    keyboardType: TextInputType.phone,
+                    validator: (v) {
+                      final number = (v ?? '').trim();
+                      if (number.isEmpty) return 'Phone is required';
+                      if (!RegExp(r'^[0-9]{7,12}$').hasMatch(number)) {
+                        return 'Please enter a valid phone number';
+                      }
+                      return null;
+                    }),
+              ),
+            ],
+          ),
           const SizedBox(height: 14),
           _inputField(_emailCtrl, 'Email Address', Icons.email_outlined,
               keyboardType: TextInputType.emailAddress,
-              validator: (v) => v == null || v.isEmpty ? 'Email is required' : null),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Email is required';
+                final emailRegex = RegExp(r'^[\w\.\-+]+@([\w\-]+\.)+[A-Za-z]{2,}$');
+                if (!emailRegex.hasMatch(v.trim())) {
+                  return 'Please enter a valid email address';
+                }
+                return null;
+              }),
           const SizedBox(height: 14),
           TextFormField(
             controller: _passwordCtrl,
@@ -560,9 +786,6 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
     );
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
-  // STEP 3 — Role-specific Detailed Form
-  // ════════════════════════════════════════════════════════════════════════════
   Widget _buildStep3() {
     if (_selectedRole == 'Doctor') return _buildDoctorForm();
     if (_selectedRole == 'Pharmacy') return _buildPharmacyForm();
@@ -572,15 +795,12 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
     return const SizedBox.shrink();
   }
 
-  // ── Doctor Form ─────────────────────────────────────────────────────────────
   Widget _buildDoctorForm() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _stepTitle('Doctor Registration', 'Complete your professional profile'),
         const SizedBox(height: 24),
-
-        // 1. Professional Details
         _sectionHeader('1. Professional Details', Icons.medical_services_rounded,
             const Color(0xFF0036BC)),
         const SizedBox(height: 12),
@@ -598,19 +818,32 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
         _inputField(_workplaceCtrl, 'Current Workplace / Clinic Name',
             Icons.local_hospital_outlined),
         const SizedBox(height: 24),
-
-        // 2. Availability
         _sectionHeader('2. Availability', Icons.schedule_rounded, const Color(0xFF0036BC)),
         const SizedBox(height: 12),
         _label('Available Days'),
         const SizedBox(height: 8),
-        _daySelector(_docAvailDays),
-        const SizedBox(height: 12),
-        _inputField(_docTimingsCtrl, 'Available Timings', Icons.access_time_rounded,
-            hint: 'e.g., 9:00 AM – 5:00 PM'),
+        _buildDaysSelector(_docAvailDays),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildTimeField(
+                controller: _docStartTimeCtrl,
+                label: 'Start Time',
+                hint: '09:00 AM',
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildTimeField(
+                controller: _docEndTimeCtrl,
+                label: 'End Time',
+                hint: '05:00 PM',
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 24),
-
-        // 3. Documents Upload
         _sectionHeader('3. Documents Upload', Icons.upload_file_rounded,
             const Color(0xFF0036BC)),
         const SizedBox(height: 12),
@@ -623,27 +856,22 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
         _fileUploadRow('Experience Certificates', _docExpCert,
             (v) => setState(() => _docExpCert = v), required: false),
         const SizedBox(height: 24),
-
-        _sectionHeader('3. Additional Comments', Icons.comment_outlined,
+        _sectionHeader('4. Additional Comments', Icons.comment_outlined,
             const Color(0xFF0036BC)),
         const SizedBox(height: 12),
         _multilineField(_docCommentsCtrl, 'Any additional information (optional)'),
         const SizedBox(height: 24),
-
         _submitButton(),
       ],
     );
   }
 
-  // ── Pharmacy Form ────────────────────────────────────────────────────────────
   Widget _buildPharmacyForm() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _stepTitle('Pharmacy Registration', 'Complete your pharmacy profile'),
         const SizedBox(height: 24),
-
-        // 1. Pharmacy Details
         _sectionHeader('1. Pharmacy Details', Icons.local_pharmacy_rounded,
             const Color(0xFF10B981)),
         const SizedBox(height: 12),
@@ -660,24 +888,37 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
         const SizedBox(height: 8),
         _yesNoRow(_pharmDelivery, (v) => setState(() => _pharmDelivery = v)),
         const SizedBox(height: 24),
-
-        // 2. Services & Availability
         _sectionHeader('2. Services & Availability', Icons.schedule_rounded,
             const Color(0xFF10B981)),
         const SizedBox(height: 12),
         _label('Operating Days'),
         const SizedBox(height: 8),
-        _daySelector(_pharmOpDays),
-        const SizedBox(height: 12),
-        _inputField(_pharmHoursCtrl, 'Operating Hours', Icons.access_time_rounded,
-            hint: 'e.g., 9:00 AM – 10:00 PM'),
+        _buildDaysSelector(_pharmOpDays),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildTimeField(
+                controller: _pharmStartTimeCtrl,
+                label: 'Start Time',
+                hint: '09:00 AM',
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildTimeField(
+                controller: _pharmEndTimeCtrl,
+                label: 'End Time',
+                hint: '05:00 PM',
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
         _label('Online Orders Available'),
         const SizedBox(height: 8),
         _yesNoRow(_pharmOnlineOrders, (v) => setState(() => _pharmOnlineOrders = v)),
         const SizedBox(height: 24),
-
-        // 3. Technology & Integration
         _sectionHeader('3. Technology & Integration', Icons.integration_instructions_rounded,
             const Color(0xFF10B981)),
         const SizedBox(height: 12),
@@ -692,11 +933,8 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
         const SizedBox(height: 12),
         _label('Willing to integrate with platform?'),
         const SizedBox(height: 8),
-        _yesNoRow(
-            _pharmWillingIntegrate, (v) => setState(() => _pharmWillingIntegrate = v)),
+        _yesNoRow(_pharmWillingIntegrate, (v) => setState(() => _pharmWillingIntegrate = v)),
         const SizedBox(height: 24),
-
-        // 4. Documents Upload
         _sectionHeader('4. Documents Upload', Icons.upload_file_rounded,
             const Color(0xFF10B981)),
         const SizedBox(height: 12),
@@ -709,27 +947,22 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
         _fileUploadRow('Pharmacy Registration Certificate', _pharmRegCert,
             (v) => setState(() => _pharmRegCert = v), required: true),
         const SizedBox(height: 24),
-
         _sectionHeader('5. Additional Comments', Icons.comment_outlined,
             const Color(0xFF10B981)),
         const SizedBox(height: 12),
         _multilineField(_pharmCommentsCtrl, 'Any additional information (optional)'),
         const SizedBox(height: 24),
-
         _submitButton(),
       ],
     );
   }
 
-  // ── Laboratory Form ──────────────────────────────────────────────────────────
   Widget _buildLabForm() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _stepTitle('Laboratory Registration', 'Complete your laboratory profile'),
         const SizedBox(height: 24),
-
-        // 1. Lab Details
         _sectionHeader('1. Lab Details', Icons.biotech_rounded, const Color(0xFF8B5CF6)),
         const SizedBox(height: 12),
         _inputField(_labNameCtrl, 'Lab Name', Icons.science_outlined),
@@ -749,25 +982,38 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
         _yesNoRow(_labHomeSampling, (v) => setState(() => _labHomeSampling = v),
             color: const Color(0xFF8B5CF6)),
         const SizedBox(height: 24),
-
-        // 2. Services & Availability
         _sectionHeader('2. Services & Availability', Icons.schedule_rounded,
             const Color(0xFF8B5CF6)),
         const SizedBox(height: 12),
         _label('Operating Days'),
         const SizedBox(height: 8),
-        _daySelector(_labOpDays),
-        const SizedBox(height: 12),
-        _inputField(_labHoursCtrl, 'Operating Hours', Icons.access_time_rounded,
-            hint: 'e.g., 7:00 AM – 9:00 PM'),
+        _buildDaysSelector(_labOpDays),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildTimeField(
+                controller: _labStartTimeCtrl,
+                label: 'Start Time',
+                hint: '09:00 AM',
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildTimeField(
+                controller: _labEndTimeCtrl,
+                label: 'End Time',
+                hint: '05:00 PM',
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
         _label('Online Reports Available'),
         const SizedBox(height: 8),
         _yesNoRow(_labOnlineReports, (v) => setState(() => _labOnlineReports = v),
             color: const Color(0xFF8B5CF6)),
         const SizedBox(height: 24),
-
-        // 3. Technology & Integration
         _sectionHeader('3. Technology & Integration', Icons.integration_instructions_rounded,
             const Color(0xFF8B5CF6)),
         const SizedBox(height: 12),
@@ -783,12 +1029,9 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
         const SizedBox(height: 12),
         _label('Willing to integrate with platform?'),
         const SizedBox(height: 8),
-        _yesNoRow(
-            _labWillingIntegrate, (v) => setState(() => _labWillingIntegrate = v),
+        _yesNoRow(_labWillingIntegrate, (v) => setState(() => _labWillingIntegrate = v),
             color: const Color(0xFF8B5CF6)),
         const SizedBox(height: 24),
-
-        // 4. Documents Upload
         _sectionHeader('4. Documents Upload', Icons.upload_file_rounded,
             const Color(0xFF8B5CF6)),
         const SizedBox(height: 12),
@@ -803,26 +1046,22 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
             (v) => setState(() => _labAccredCert = v), required: false,
             color: const Color(0xFF8B5CF6)),
         const SizedBox(height: 24),
-
         _sectionHeader('5. Additional Comments', Icons.comment_outlined,
             const Color(0xFF8B5CF6)),
         const SizedBox(height: 12),
         _multilineField(_labCommentsCtrl, 'Any additional information (optional)'),
         const SizedBox(height: 24),
-
         _submitButton(color: const Color(0xFF8B5CF6)),
       ],
     );
   }
 
-  // ── Student Form ─────────────────────────────────────────────────────────────
   Widget _buildStudentForm() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _stepTitle('Student Registration', 'Complete your student profile'),
         const SizedBox(height: 24),
-
         _sectionHeader('1. Academic Details', Icons.school_rounded, const Color(0xFFF59E0B)),
         const SizedBox(height: 12),
         _inputField(_studentUniversityCtrl, 'University / Institution Name',
@@ -837,33 +1076,28 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
         _inputField(_studentIdCtrl, 'Student ID / Roll Number',
             Icons.badge_outlined),
         const SizedBox(height: 24),
-
         _sectionHeader('2. Documents', Icons.upload_file_rounded, const Color(0xFFF59E0B)),
         const SizedBox(height: 12),
         _fileUploadRow('Student ID Card', _studentIdFile,
             (v) => setState(() => _studentIdFile = v),
             required: true, color: const Color(0xFFF59E0B)),
         const SizedBox(height: 24),
-
         _sectionHeader('3. Additional Comments', Icons.comment_outlined,
             const Color(0xFFF59E0B)),
         const SizedBox(height: 12),
         _multilineField(_studentCommentsCtrl, 'Any additional information (optional)'),
         const SizedBox(height: 24),
-
         _submitButton(color: const Color(0xFFF59E0B)),
       ],
     );
   }
 
-  // ── Instructor Form ───────────────────────────────────────────────────────────
   Widget _buildInstructorForm() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _stepTitle('Instructor Registration', 'Complete your instructor profile'),
         const SizedBox(height: 24),
-
         _sectionHeader('1. Professional Details', Icons.cast_for_education_rounded,
             const Color(0xFFEF4444)),
         const SizedBox(height: 12),
@@ -883,7 +1117,6 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
             Icons.menu_book_outlined,
             hint: 'e.g., Anatomy, Pharmacology, Clinical Skills'),
         const SizedBox(height: 24),
-
         _sectionHeader('2. Documents', Icons.upload_file_rounded, const Color(0xFFEF4444)),
         const SizedBox(height: 12),
         _fileUploadRow('CNIC / ID', _instrCnic,
@@ -894,21 +1127,16 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
             (v) => setState(() => _instrCvFile = v),
             required: true, color: const Color(0xFFEF4444)),
         const SizedBox(height: 24),
-
         _sectionHeader('3. Additional Comments', Icons.comment_outlined,
             const Color(0xFFEF4444)),
         const SizedBox(height: 12),
         _multilineField(_instrCommentsCtrl, 'Any additional information (optional)'),
         const SizedBox(height: 24),
-
         _submitButton(color: const Color(0xFFEF4444)),
       ],
     );
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
-  // SHARED WIDGETS
-  // ════════════════════════════════════════════════════════════════════════════
 
   Widget _stepTitle(String title, String subtitle) {
     return Column(
@@ -958,35 +1186,99 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
             color: Color(0xFF374151)));
   }
 
-  Widget _daySelector(Set<String> selected) {
+  Widget _buildDaysSelector(Set<String> selected) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: _weekDays.map((day) {
         final isSelected = selected.contains(day);
-        return GestureDetector(
-          onTap: () => setState(() {
-            isSelected ? selected.remove(day) : selected.add(day);
-          }),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: isSelected ? AppColors.primaryColor : const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                  color: isSelected
-                      ? AppColors.primaryColor
-                      : const Color(0xFFE2E8F0)),
+        return FilterChip(
+          label: Text(day),
+          selected: isSelected,
+          onSelected: (sel) {
+            setState(() {
+              sel ? selected.add(day) : selected.remove(day);
+            });
+          },
+          selectedColor: AppColors.primaryColor,
+          checkmarkColor: Colors.white,
+          labelStyle: TextStyle(
+            color: isSelected ? Colors.white : const Color(0xFF64748B),
+            fontWeight: FontWeight.w600,
+          ),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(
+              color: isSelected
+                  ? AppColors.primaryColor
+                  : const Color(0xFFE2E8F0),
             ),
-            child: Text(day,
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: isSelected ? Colors.white : const Color(0xFF64748B))),
           ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildTimeField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF64748B),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          readOnly: true,
+          onTap: () => _selectTime(controller),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Required';
+            }
+            return null;
+          },
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+            prefixIcon: const Icon(
+              Icons.access_time,
+              color: AppColors.primaryColor,
+              size: 20,
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 18,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: AppColors.primaryColor,
+                width: 2,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1094,7 +1386,6 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
                   onPicked(result.files.first.name);
                 }
               } catch (e) {
-                // Fallback if file picker fails
                 onPicked('${label.replaceAll(' ', '_')}.pdf');
               }
             },
@@ -1239,7 +1530,6 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
   Widget _submitButton({Color color = AppColors.primaryColor}) {
     return Column(
       children: [
-        // "By clicking submit, you agree to our Terms and Conditions"
         Padding(
           padding: const EdgeInsets.only(bottom: 16),
           child: Wrap(
@@ -1322,9 +1612,6 @@ class _WorkWithUsSignupState extends State<WorkWithUsSignup> {
   }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// STEP INDICATOR
-// ════════════════════════════════════════════════════════════════════════════
 class _StepIndicator extends StatelessWidget {
   final int currentStep;
   const _StepIndicator({required this.currentStep});
