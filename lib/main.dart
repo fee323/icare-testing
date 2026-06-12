@@ -6,7 +6,7 @@ import 'package:icare/navigators/app_router.dart';
 import 'package:icare/utils/theme.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:responsive_framework/responsive_framework.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:icare/services/fcm_service.dart';
 import 'package:icare/widgets/incoming_call_listener.dart';
@@ -24,7 +24,21 @@ void main() async {
   usePathUrlStrategy();
 
   if (!kIsWeb) {
-    await Firebase.initializeApp();
+    // macOS does not bundle GoogleService-Info.plist via Xcode automatically,
+    // so we provide explicit options as a fallback.
+    if (defaultTargetPlatform == TargetPlatform.macOS) {
+      await Firebase.initializeApp(
+        options: const FirebaseOptions(
+          apiKey: 'AIzaSyAzAiLxdhVLMYnuSH1apD6XyJ5LZXbDYDg',
+          appId: '1:564788374793:ios:1a131d6066e988ee0877d8',
+          messagingSenderId: '564788374793',
+          projectId: 'icare-5c82d',
+          storageBucket: 'icare-5c82d.firebasestorage.app',
+        ),
+      );
+    } else {
+      await Firebase.initializeApp();
+    }
     await FcmService().init();
   }
   runApp(

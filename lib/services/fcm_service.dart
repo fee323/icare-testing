@@ -36,7 +36,12 @@ class FcmService {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
     // Request permission (iOS + Android 13+)
-    await fcm.requestPermission(alert: true, badge: true, sound: true);
+    // macOS in debug mode may not have notification entitlements — skip gracefully.
+    try {
+      await fcm.requestPermission(alert: true, badge: true, sound: true);
+    } catch (e) {
+      debugPrint('⚠️ FCM permission request failed (macOS debug): $e');
+    }
 
     // Setup local notifications for foreground display
     await _setupLocalNotifications();
